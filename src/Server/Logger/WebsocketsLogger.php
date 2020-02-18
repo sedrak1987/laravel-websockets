@@ -47,6 +47,13 @@ class WebsocketsLogger extends Logger implements MessageComponentInterface
     {
         $socketId = $connection->socketId ?? null;
 
+        $streams = session()->get('streams');
+
+        if(!empty($streams) && isset($streams[$socketId])){
+            unset($streams[$socketId]);
+            session(['streams'=>$streams ]);
+        }
+
         $this->warn("Connection id {$socketId} closed.");
 
         $this->app->onClose(ConnectionLogger::decorate($connection));

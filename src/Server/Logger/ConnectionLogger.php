@@ -38,17 +38,9 @@ class ConnectionLogger extends Logger implements ConnectionInterface
 
         $m = json_decode($data);
 
-        if ($m->channel ==  'videoStream') {
+        if (strpos($m->channel, 'privatechat') !== false && property_exists($m, 'data')) {
             $message = json_decode($m->data);
-
-            if($message->message->data->type== 'video_stream'){
-                $sdp = $message->message->data->sdp;
-                $streams = session()->get('streams');
-                $streams[$message->message->userId] = $sdp;
-                session(['streams'=>$streams ]);
-            }
-
-            if($message->message->data->type== 'getVideoStream'){
+            if($message->message->messageType == 'videoStream'){
                 $streams = session()->get('streams');
                 $newData = [];
                 $newData['channel'] = $m->channel;
@@ -56,7 +48,17 @@ class ConnectionLogger extends Logger implements ConnectionInterface
                 $newData['data']['message'] = ['streams'=>$streams];
 
                 $data = json_encode($newData);
+            }
+        }
 
+        if ($m->channel ==  'videoStream') {
+            $message = json_decode($m->data);
+
+            if($message->message->data->type== 'video_stream'){
+                $sdp = $message->message->data->sdp;
+                $streams = session()->get('streams');
+                $streams[$socketId] = ['sdp'=>$sdp, 'user_id'=>$message->message->userId, 'user'=>$message->message->user];
+                session(['streams'=>$streams ]);
             }
 
         }
