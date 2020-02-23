@@ -38,29 +38,34 @@ class ConnectionLogger extends Logger implements ConnectionInterface
 
         $m = json_decode($data);
 
-        if (strpos($m->channel, 'privatechat') !== false && property_exists($m, 'data')) {
+        if (strpos($m->channel, 'videoStream') !== false && property_exists($m, 'data')) {
             $message = json_decode($m->data);
-            if($message->message->messageType == 'videoStream'){
+
+            if ($message->message->messageType == 'videoStream') {
+                $room_id = $message->message->room_id;
                 $streams = session()->get('streams');
+                $streams[$socketId] = (array)$message->message;
+                session(['streams' => $streams]);
+            }
+
+            if($message->message->messageType == 'getRoomVideoStreams'){
+                $streams = session()->get('streams');
+
+                $room_id = $message->message->room_id;
+
+                $collection = collect($streams);
+
+                $filtered = $collection->filter(function ($value, $key) use ($room_id){
+                    return $value['room_id'] == $room_id;
+                });
+
                 $newData = [];
                 $newData['channel'] = $m->channel;
                 $newData['event'] = $m->event;
-                $newData['data']['message'] = ['streams'=>$streams];
+                $newData['data']['message'] = ['streams'=>$filtered->all()];
 
                 $data = json_encode($newData);
             }
-        }
-
-        if ($m->channel ==  'videoStream') {
-            $message = json_decode($m->data);
-
-            if($message->message->data->type== 'video_stream'){
-                $sdp = $message->message->data->sdp;
-                $streams = session()->get('streams');
-                $streams[$socketId] = ['sdp'=>$sdp, 'user_id'=>$message->message->userId, 'user'=>$message->message->user];
-                session(['streams'=>$streams ]);
-            }
-
         }
         $this->connection->send($data);
     }
